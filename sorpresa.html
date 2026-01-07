@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Ti</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #2e1a1f; /* Ciruela oscuro cálido */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <canvas id="heart-canvas"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fontfaceobserver/2.3.0/fontfaceobserver.standalone.js"></script>
+    
+    <script>
+        // Configuraciones
+        const MENSAJE_1 = "GRACIAS POR ESTAR\nEN MI VIDA"; // Usa \n para salto de línea
+        const MENSAJE_2 =  "SOS Y SIEMPRE VAS A SER\n EL AMOR DE MI VIDA" ;
+        const MENSAJE_3 = "TE AMO ❤️";
+        const TIEMPO_LLUVIA = 3000; // Tiempo cayendo antes de formar el primer texto (ms)
+        const TIEMPO_PRIMER_TEXTO = 5000; // Tiempo mostrando el primer texto (ms)
+        const TIEMPO_SEGUNDO_TEXTO = 8000; // Tiempo mostrando el segundo texto (ms)
+
+        const canvas = document.getElementById('heart-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Función para obtener puntos de texto (soporta multilínea)
+        function getPoints(text) {
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = width;
+            tempCanvas.height = height;
+
+            // Dividir por líneas
+            const lines = text.split('\n');
+            
+            // Calcular tamaño de fuente
+            // Ajustar para que la línea más larga quepa
+            const maxLineLen = Math.max(...lines.map(l => l.length));
+            const size = Math.min(width / maxLineLen * 1.0, height / lines.length * 0.6);
+            
+            tempCtx.font = `bold ${size}px 'Arial'`; // Podriamos usar font 'Poppins' si cargara aqui, pero Arial es seguro
+            tempCtx.textAlign = 'center';
+            tempCtx.textBaseline = 'middle';
+
+            const lineHeight = size * 1.2;
+            const totalHeight = lines.length * lineHeight;
+            const startY = (height - totalHeight) / 2 + lineHeight / 2;
+
+            lines.forEach((line, i) => {
+                tempCtx.fillText(line, width / 2, startY + i * lineHeight);
+            });
+
+            const data = tempCtx.getImageData(0, 0, width, height).data;
+            const points = [];
+            // Optimización: saltar más píxeles para menos partículas pero más rápido
+            const step = 7; 
+            for (let y = 0; y < height; y += step) {
+                for (let x = 0; x < width; x += step) {
+                    if (data[(y * width + x) * 4 + 3] > 128) {
+                        points.push({x, y});
+                    }
+                }
+            }
+            return points;
+        }
+
+        class Particle {
+            constructor(tx, ty, isRain = false) {
+                this.x = Math.random() * width;
+                // Si es lluvia, empieza arriba. Si no, posición aleatoria.
+                this.y = isRain ? -Math.random() * height : Math.random() * height; 
+                this.tx = tx;
+                this.ty = ty;
+                this.size = Math.random() * 3 + 2;
+                this.speed = Math.random() * 0.04 + 0.02;
+            }
+            update() {
+                // Movimiento suave hacia el objetivo
+                this.x += (this.tx - this.x) * this.speed;
+                this.y += (this.ty - this.y) * this.speed;
+            }
+            draw() {
+                ctx.fillStyle = "#ffc2d1"; // Rosa claro pastel
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Función para transicionar a un nuevo texto
+        function formText(text) {
+            const points = getPoints(text);
+            
+            // Si necesitamos más partículas, agregamos nuevas
+            if (points.length > particles.length) {
+                const numToAdd = points.length - particles.length;
+                for (let i = 0; i < numToAdd; i++) {
+                    // Nuevas partículas nacen desde posiciones aleatorias (o bordes)
+                    particles.push(new Particle(width/2, height/2)); 
+                }
+            }
+            
+            // Asignamos objetivos
+            // Si sobran partículas, las mandamos a caer al fondo
+            particles.forEach((p, i) => {
+                if (i < points.length) {
+                    p.tx = points[i].x;
+                    p.ty = points[i].y;
+                    p.speed = Math.random() * 0.04 + 0.02; // Reiniciar velocidad
+                } else {
+                    p.tx = Math.random() * width;
+                    p.ty = height + 100; // Fuera de pantalla abajo
+                }
+            });
+        }
+
+        function startRain() {
+            // Crear partículas iniciales "cayendo"
+            const particleCount = 600; // Cantidad para la lluvia
+            for (let i = 0; i < particleCount; i++) {
+                // Objetivos en el fondo para que caigan
+                const tx = Math.random() * width;
+                const ty = height + Math.random() * 500;
+                particles.push(new Particle(tx, ty, true));
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = 'rgba(13, 13, 26, 0.2)'; // Rastro
+            ctx.fillRect(0, 0, width, height);
+            
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animate);
+        }
+
+        // --- SECUENCIA DE ANIMACIÓN ---
+        function runSequence() {
+            // 1. Empezar lluvia
+            startRain();
+            animate();
+
+            // 2. Formar primer texto
+            setTimeout(() => {
+                formText(MENSAJE_1);
+            }, TIEMPO_LLUVIA);
+
+            // 3. Cambiar al segundo texto
+            setTimeout(() => {
+                formText(MENSAJE_2);
+            }, TIEMPO_LLUVIA + TIEMPO_PRIMER_TEXTO);
+
+            // 4. Cambiar al tercer texto
+            setTimeout(() => {
+                formText(MENSAJE_3);
+            }, TIEMPO_LLUVIA + TIEMPO_PRIMER_TEXTO + TIEMPO_SEGUNDO_TEXTO);
+        }
+
+        runSequence();
+    </script>
+</body>
+</html>

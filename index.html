@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Mi Amor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-pink: #ffeef2;   /* Relleno rosadito claro */
+            --secondary-pink: #ffc2d1;
+            --accent-gold: #b08d55;    /* Borde marrón/dorado */
+            --text-color: #8b5e3c;     /* Color de texto marrón */
+        }
+
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #fff0f5 0%, #e6e9f0 100%);
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+        }
+
+        .container { text-align: center; }
+
+        /* --- CANDADO CONVENCIONAL --- */
+        .lock-container { 
+            position: relative; 
+            width: 440px; 
+            height: 520px; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 60px;
+        }
+
+        /* Cuerpo del Candado (Rectangular con bordes redondeados) */
+        .lock-body {
+            position: relative;
+            width: 320px; /* Ancho estándar */
+            height: 280px;
+            background-color: var(--primary-pink);
+            border: 20px solid var(--accent-gold);
+            border-radius: 40px; /* Bordes suaves */
+            margin-top: -30px; /* Para que encastre con el arco */
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 15px 30px rgba(176, 141, 85, 0.3);
+        }
+
+        /* El Arco del Candado */
+        .lock-shackle {
+            width: 160px;
+            height: 140px;
+            border: 25px solid var(--accent-gold);
+            border-bottom: none;
+            border-radius: 90px 90px 0 0;
+            position: relative;
+            top: 20px; 
+            z-index: 1; 
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: inset 5px 5px 10px rgba(0,0,0,0.1);
+        }
+
+        .unlocked { 
+            transform: translateY(-50px) rotate(15deg); 
+            transform-origin: bottom right;
+        }
+
+        .combination-dial {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            margin-top: 10px;
+            z-index: 10;
+        }
+        
+        .dial-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #fff;
+            padding: 5px;
+            border-radius: 10px;
+            border: 2px solid var(--secondary-pink);
+            width: 55px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .dial-number {
+             font-size: 34px;
+             font-weight: 700;
+             color: var(--text-color);
+             user-select: none;
+         }
+
+        .arrow {
+            cursor: pointer;
+            font-size: 20px;
+            color: var(--accent-gold);
+            user-select: none;
+            transition: transform 0.1s;
+        }
+
+        .arrow:hover { color: var(--secondary-pink); }
+        .arrow:active { transform: scale(1.2); }
+
+        .unlock-btn {
+            background: var(--accent-gold);
+            border: none;
+            padding: 12px 40px;
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(176, 141, 85, 0.4);
+            margin-top: 25px;
+            text-transform: uppercase;
+            z-index: 10;
+        }
+
+        #status-message {
+            margin-top: 15px;
+            font-size: 18px;
+            color: var(--text-color);
+            font-family: 'Dancing Script', cursive;
+            font-weight: 700;
+            z-index: 10;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="lock-container">
+            <div id="shackle" class="lock-shackle"></div>
+            
+            <div id="lockBody" class="lock-body">
+
+                <div class="combination-dial">
+                    <div class="dial-container">
+                        <span class="arrow" onclick="changeDigit(0, 1)">▲</span>
+                        <div id="d0" class="dial-number">0</div>
+                        <span class="arrow" onclick="changeDigit(0, -1)">▼</span>
+                    </div>
+                    <div class="dial-container">
+                        <span class="arrow" onclick="changeDigit(1, 1)">▲</span>
+                        <div id="d1" class="dial-number">0</div>
+                        <span class="arrow" onclick="changeDigit(1, -1)">▼</span>
+                    </div>
+                    <div class="dial-container">
+                        <span class="arrow" onclick="changeDigit(2, 1)">▲</span>
+                        <div id="d2" class="dial-number">0</div>
+                        <span class="arrow" onclick="changeDigit(2, -1)">▼</span>
+                    </div>
+                    <div class="dial-container">
+                        <span class="arrow" onclick="changeDigit(3, 1)">▲</span>
+                        <div id="d3" class="dial-number">0</div>
+                        <span class="arrow" onclick="changeDigit(3, -1)">▼</span>
+                    </div>
+                </div>
+
+                <button class="unlock-btn" onclick="checkCombination()">Abrir</button>
+                <p id="status-message">Escribe nuestra clave especial</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const COMBINACION_CORRECTA = [0, 6, 1, 0]; 
+        let valoresActuales = [0, 0, 0, 0];
+
+        function changeDigit(index, delta) {
+            valoresActuales[index] += delta;
+            if (valoresActuales[index] > 9) valoresActuales[index] = 0;
+            if (valoresActuales[index] < 0) valoresActuales[index] = 9;
+            document.getElementById(`d${index}`).innerText = valoresActuales[index];
+        }
+
+        function checkCombination() {
+            const esCorrecto = valoresActuales.every((val, i) => val === COMBINACION_CORRECTA[i]);
+            const status = document.getElementById('status-message');
+            const shackle = document.getElementById('shackle');
+            const body = document.getElementById('lockBody');
+
+            if (esCorrecto) {
+                status.innerText = "¡Correcto! Te amo... ❤️";
+                shackle.classList.add('unlocked');
+                setTimeout(() => {
+                    window.location.href = "sorpresa.html";
+                }, 1500);
+            } else {
+                status.innerText = "Esa no es la clave, mi amor...";
+                body.style.animation = "shake 0.3s";
+                setTimeout(() => body.style.animation = "", 300);
+            }
+        }
+    </script>
+</body>
+</html>
