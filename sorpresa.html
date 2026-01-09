@@ -8,7 +8,7 @@
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #2e1a1f; /* Ciruela oscuro cálido */
+            background: radial-gradient(circle at center, #3a1c25 0%, #1a0f12 100%);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -20,45 +20,45 @@
 <body>
     <canvas id="heart-canvas"></canvas>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fontfaceobserver/2.3.0/fontfaceobserver.standalone.js"></script>
-    
     <script>
-        // Configuraciones
-        const MENSAJE_1 = "GRACIAS POR ESTAR\nEN MI VIDA"; // Usa \n para salto de línea
-        const MENSAJE_2 =  "SOS Y SIEMPRE VAS A SER\n EL AMOR DE MI VIDA" ;
+        // --- CONFIGURACIÓN ---
+        const MENSAJE_1 = "GRACIAS POR ESTAR\nEN MI VIDA";
+        const MENSAJE_2 = "SOS Y SIEMPRE VAS A SER\n EL AMOR DE MI VIDA";
         const MENSAJE_3 = "TE AMO ❤️";
-        const TIEMPO_LLUVIA = 3000; // Tiempo cayendo antes de formar el primer texto (ms)
-        const TIEMPO_PRIMER_TEXTO = 5000; // Tiempo mostrando el primer texto (ms)
-        const TIEMPO_SEGUNDO_TEXTO = 8000; // Tiempo mostrando el segundo texto (ms)
+        
+        // Tiempos de espera entre mensajes (en milisegundos)
+        const TIEMPO_LLUVIA = 2500;
+        const TIEMPO_PRIMER_TEXTO = 5000;
+        const TIEMPO_SEGUNDO_TEXTO = 8000;
 
         const canvas = document.getElementById('heart-canvas');
         const ctx = canvas.getContext('2d');
         let width, height;
         let particles = [];
+        let mouse = { x: -1000, y: -1000 };
+
+        const COLORES = ["#ffc2d1", "#ffeef2", "#ffd1dc", "#f8e4c8", "#ffffff"];
 
         function resize() {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
         }
         window.addEventListener('resize', resize);
+        window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener('touchstart', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, {passive: true});
         resize();
 
-        // Función para obtener puntos de texto (soporta multilínea)
         function getPoints(text) {
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
             tempCanvas.width = width;
             tempCanvas.height = height;
 
-            // Dividir por líneas
             const lines = text.split('\n');
-            
-            // Calcular tamaño de fuente
-            // Ajustar para que la línea más larga quepa
             const maxLineLen = Math.max(...lines.map(l => l.length));
-            const size = Math.min(width / maxLineLen * 1.0, height / lines.length * 0.6);
+            const size = Math.min(width / maxLineLen * 1.2, height / lines.length * 0.6);
             
-            tempCtx.font = `bold ${size}px 'Arial'`; // Podriamos usar font 'Poppins' si cargara aqui, pero Arial es seguro
+            tempCtx.font = `bold ${size}px 'Arial', sans-serif`;
             tempCtx.textAlign = 'center';
             tempCtx.textBaseline = 'middle';
 
@@ -72,8 +72,7 @@
 
             const data = tempCtx.getImageData(0, 0, width, height).data;
             const points = [];
-            // Optimización: saltar más píxeles para menos partículas pero más rápido
-            const step = 7; 
+            const step = Math.floor(width < 600 ? 7 : 9); 
             for (let y = 0; y < height; y += step) {
                 for (let x = 0; x < width; x += step) {
                     if (data[(y * width + x) * 4 + 3] > 128) {
@@ -87,68 +86,93 @@
         class Particle {
             constructor(tx, ty, isRain = false) {
                 this.x = Math.random() * width;
-                // Si es lluvia, empieza arriba. Si no, posición aleatoria.
-                this.y = isRain ? -Math.random() * height : Math.random() * height; 
+                this.y = isRain ? -Math.random() * height : Math.random() * height;
                 this.tx = tx;
                 this.ty = ty;
-                this.size = Math.random() * 3 + 2;
-                this.speed = Math.random() * 0.04 + 0.02;
+                this.size = Math.random() * 2.8 + 1.2; 
+                this.color = COLORES[Math.floor(Math.random() * COLORES.length)];
+                
+                // --- VELOCIDAD AJUSTADA (Más lenta y suave) ---
+                // Bajamos de 0.12 a 0.05 para que el viaje sea más tranquilo
+                this.speed = Math.random() * 0.05 + 0.02; 
             }
+
             update() {
-                // Movimiento suave hacia el objetivo
-                this.x += (this.tx - this.x) * this.speed;
-                this.y += (this.ty - this.y) * this.speed;
+                let dx = this.tx - this.x;
+                let dy = this.ty - this.y;
+                
+                let mdx = mouse.x - this.x;
+                let mdy = mouse.y - this.y;
+                let distance = Math.sqrt(mdx*mdx + mdy*mdy);
+                if (distance < 60) {
+                    this.x -= mdx * 0.08;
+                    this.y -= mdy * 0.08;
+                }
+
+                this.x += dx * this.speed;
+                this.y += dy * this.speed;
             }
+
             draw() {
-                ctx.fillStyle = "#ffc2d1"; // Rosa claro pastel
+                ctx.fillStyle = this.color;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
 
-        // Función para transicionar a un nuevo texto
+        let backgroundParticles = [];
+        function createBackgroundParticles() {
+            for(let i=0; i<60; i++) {
+                backgroundParticles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 1.2 + 0.5,
+                    speed: Math.random() * 0.5 + 0.1
+                });
+            }
+        }
+
+        function drawBackground() {
+            ctx.fillStyle = "#ffffff";
+            backgroundParticles.forEach(p => {
+                p.y -= p.speed;
+                if(p.y < 0) p.y = height;
+                ctx.globalAlpha = 0.2; 
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+
         function formText(text) {
             const points = getPoints(text);
-            
-            // Si necesitamos más partículas, agregamos nuevas
             if (points.length > particles.length) {
-                const numToAdd = points.length - particles.length;
-                for (let i = 0; i < numToAdd; i++) {
-                    // Nuevas partículas nacen desde posiciones aleatorias (o bordes)
-                    particles.push(new Particle(width/2, height/2)); 
+                const toAdd = points.length - particles.length;
+                for (let i = 0; i < toAdd; i++) {
+                    particles.push(new Particle(width/2, height/2));
                 }
             }
-            
-            // Asignamos objetivos
-            // Si sobran partículas, las mandamos a caer al fondo
             particles.forEach((p, i) => {
                 if (i < points.length) {
                     p.tx = points[i].x;
                     p.ty = points[i].y;
-                    p.speed = Math.random() * 0.04 + 0.02; // Reiniciar velocidad
+                    // Reset de velocidad para que todos reaccionen igual al cambiar de texto
+                    p.speed = Math.random() * 0.05 + 0.02;
                 } else {
                     p.tx = Math.random() * width;
-                    p.ty = height + 100; // Fuera de pantalla abajo
+                    p.ty = height + 200;
                 }
             });
         }
 
-        function startRain() {
-            // Crear partículas iniciales "cayendo"
-            const particleCount = 600; // Cantidad para la lluvia
-            for (let i = 0; i < particleCount; i++) {
-                // Objetivos en el fondo para que caigan
-                const tx = Math.random() * width;
-                const ty = height + Math.random() * 500;
-                particles.push(new Particle(tx, ty, true));
-            }
-        }
-
         function animate() {
-            ctx.fillStyle = 'rgba(13, 13, 26, 0.2)'; // Rastro
+            ctx.fillStyle = 'rgba(26, 15, 18, 0.25)'; 
             ctx.fillRect(0, 0, width, height);
             
+            drawBackground();
+
             particles.forEach(p => {
                 p.update();
                 p.draw();
@@ -156,26 +180,17 @@
             requestAnimationFrame(animate);
         }
 
-        // --- SECUENCIA DE ANIMACIÓN ---
         function runSequence() {
-            // 1. Empezar lluvia
-            startRain();
+            createBackgroundParticles();
+            const initialParticles = width < 600 ? 500 : 900;
+            for (let i = 0; i < initialParticles; i++) {
+                particles.push(new Particle(Math.random() * width, height + 200, true));
+            }
             animate();
 
-            // 2. Formar primer texto
-            setTimeout(() => {
-                formText(MENSAJE_1);
-            }, TIEMPO_LLUVIA);
-
-            // 3. Cambiar al segundo texto
-            setTimeout(() => {
-                formText(MENSAJE_2);
-            }, TIEMPO_LLUVIA + TIEMPO_PRIMER_TEXTO);
-
-            // 4. Cambiar al tercer texto
-            setTimeout(() => {
-                formText(MENSAJE_3);
-            }, TIEMPO_LLUVIA + TIEMPO_PRIMER_TEXTO + TIEMPO_SEGUNDO_TEXTO);
+            setTimeout(() => formText(MENSAJE_1), TIEMPO_LLUVIA);
+            setTimeout(() => formText(MENSAJE_2), TIEMPO_LLUVIA + TIEMPO_PRIMER_TEXTO);
+            setTimeout(() => formText(MENSAJE_3), TIEMPO_LLUVIA + TIEMPO_PRIMER_TEXTO + TIEMPO_SEGUNDO_TEXTO);
         }
 
         runSequence();
