@@ -3,81 +3,139 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Para Ti</title>
+    <title>Para Mi Amor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap" rel="stylesheet">
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: radial-gradient(circle at center, #3a1c25 0%, #1a0f12 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: radial-gradient(circle at center, #3a1c25 0%, #1a0f12 100%); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            cursor: crosshair; 
         }
         canvas { display: block; }
     </style>
 </head>
 <body>
+
+    <audio id="bg-music" autoplay loop>
+        <source src="song/Flightless Bird, American Mouth.mp3" type="audio/mpeg">
+    </audio>
+
     <canvas id="heart-canvas"></canvas>
 
     <script>
-        // --- CONFIGURACIÓN ---
-        const MENSAJE_1 = "GRACIAS POR ESTAR\nEN MI VIDA";
-        const MENSAJE_2 = "SOS Y SIEMPRE VAS A SER\n EL AMOR DE MI VIDA";
-        const MENSAJE_3 = "TE AMO ❤️";
+        const MENSAJES = [
+            "Hola Amor",
+            "¿cómo estás?",
+            "Felices\n9 meses!!",
+            "Es increíble\npensar en todo",
+            "el tiempo que\nllevamos juntos",
+            "Hemos pasado\nmomentos\nlindos",
+            "y otros\ndificiles",
+            "Pero todos\nfueron\na tu lado",
+            "y eso los vuelve\nmomentos\nimportantes",
+            "que nos ayudan\na crecer...",
+            "...avanzar\ny mejorar",
+            "Me siento muy\nperdida a veces",
+            "en mi vida,\nen la carrera",
+            "conmigo,\ncon mi familia",
+            "Pero lo único\nde lo que\nestoy segura",
+            "¡SOS VOS!",
+            "gracias por\nser esa paz",
+            "gracias por\nenseñarme",
+            "y ayudarme\na mejorar",
+            "gracias por\naguantarme",
+            "gracias por\namarme tanto",
+            "y gracias por\ndejarme amarte",
+            "Amo ir de la\nmano con vos\nen la vida",
+            "Espero con ansias\nver cómo crecemos\njuntos",
+            "Te amo\n❤️"
+        ];
         
-        // Tiempos de espera entre mensajes (en milisegundos)
-        const TIEMPO_LLUVIA = 2500;
-        const TIEMPO_PRIMER_TEXTO = 5000;
-        const TIEMPO_SEGUNDO_TEXTO = 8000;
+        const T_LLUVIA = 2500;  
+        const T_POR_MENSAJE = 9000; 
 
         const canvas = document.getElementById('heart-canvas');
         const ctx = canvas.getContext('2d');
-        let width, height;
-        let particles = [];
+        const music = document.getElementById('bg-music');
+        let width, height, particles = [];
         let mouse = { x: -1000, y: -1000 };
-
         const COLORES = ["#ffc2d1", "#ffeef2", "#ffd1dc", "#f8e4c8", "#ffffff"];
 
-        function resize() {
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
+        function resize() { 
+            width = canvas.width = window.innerWidth; 
+            height = canvas.height = window.innerHeight; 
         }
         window.addEventListener('resize', resize);
+        
+        // La música inicia al primer toque en la pantalla
+        const iniciarAudio = () => { 
+            if(music.paused) {
+                music.play().then(() => {
+                    // Remove listeners once playing
+                    document.removeEventListener('click', iniciarAudio);
+                    document.removeEventListener('touchstart', iniciarAudio);
+                }).catch(e => console.log("Audio play failed:", e));
+            }
+        };
+        document.addEventListener('click', iniciarAudio);
+        document.addEventListener('touchstart', iniciarAudio, {passive: true});
+
         window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-        window.addEventListener('touchstart', e => { mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, {passive: true});
         resize();
 
         function getPoints(text) {
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = width;
-            tempCanvas.height = height;
-
-            const lines = text.split('\n');
-            const maxLineLen = Math.max(...lines.map(l => l.length));
-            const size = Math.min(width / maxLineLen * 1.2, height / lines.length * 0.6);
+            tempCanvas.width = width; tempCanvas.height = height;
             
-            tempCtx.font = `bold ${size}px 'Arial', sans-serif`;
-            tempCtx.textAlign = 'center';
+            // --- TAMAÑO DE LETRA MUCHO MÁS GRANDE ---
+            // Ajusta el tamaño según el ancho de la pantalla para que sea imponente
+            let fontSize = Math.min(width * 0.18, height * 0.15, 180);
+            if (width < 600) fontSize = width * 0.22; // Aún más grande en móviles
+            
+            tempCtx.font = `bold ${fontSize}px 'Montserrat', sans-serif`;
+            tempCtx.textAlign = 'center'; 
             tempCtx.textBaseline = 'middle';
+            
+            const rawLines = text.split('\n');
+            const maxWidth = width * 0.9;
+            const finalLines = [];
 
-            const lineHeight = size * 1.2;
-            const totalHeight = lines.length * lineHeight;
+            // Lógica de partición de palabras si la línea es muy ancha para el tamaño elegido
+            rawLines.forEach(line => {
+                const words = line.split(' ');
+                let currentLine = words[0];
+                for (let i = 1; i < words.length; i++) {
+                    if (tempCtx.measureText(currentLine + " " + words[i]).width < maxWidth) {
+                        currentLine += " " + words[i];
+                    } else {
+                        finalLines.push(currentLine);
+                        currentLine = words[i];
+                    }
+                }
+                finalLines.push(currentLine);
+            });
+
+            const lineHeight = fontSize * 1.1;
+            const totalHeight = finalLines.length * lineHeight;
             const startY = (height - totalHeight) / 2 + lineHeight / 2;
-
-            lines.forEach((line, i) => {
-                tempCtx.fillText(line, width / 2, startY + i * lineHeight);
+            
+            finalLines.forEach((line, i) => { 
+                tempCtx.fillText(line, width / 2, startY + i * lineHeight); 
             });
 
             const data = tempCtx.getImageData(0, 0, width, height).data;
             const points = [];
-            const step = Math.floor(width < 600 ? 7 : 9); 
+            // Step en 4 para tener muchos brillos que definan bien las letras gigantes
+            const step = 4; 
             for (let y = 0; y < height; y += step) {
                 for (let x = 0; x < width; x += step) {
-                    if (data[(y * width + x) * 4 + 3] > 128) {
-                        points.push({x, y});
-                    }
+                    if (data[(y * width + x) * 4 + 3] > 128) points.push({x, y});
                 }
             }
             return points;
@@ -87,82 +145,38 @@
             constructor(tx, ty, isRain = false) {
                 this.x = Math.random() * width;
                 this.y = isRain ? -Math.random() * height : Math.random() * height;
-                this.tx = tx;
-                this.ty = ty;
-                this.size = Math.random() * 2.8 + 1.2; 
+                this.tx = tx; this.ty = ty;
+                this.size = Math.random() * 2 + 1; 
                 this.color = COLORES[Math.floor(Math.random() * COLORES.length)];
-                
-                // --- VELOCIDAD AJUSTADA (Más lenta y suave) ---
-                // Bajamos de 0.12 a 0.05 para que el viaje sea más tranquilo
-                this.speed = Math.random() * 0.05 + 0.02; 
+                this.speed = Math.random() * 0.05 + 0.02;
             }
-
             update() {
-                let dx = this.tx - this.x;
-                let dy = this.ty - this.y;
-                
-                let mdx = mouse.x - this.x;
-                let mdy = mouse.y - this.y;
-                let distance = Math.sqrt(mdx*mdx + mdy*mdy);
-                if (distance < 60) {
-                    this.x -= mdx * 0.08;
-                    this.y -= mdy * 0.08;
-                }
-
-                this.x += dx * this.speed;
-                this.y += dy * this.speed;
+                let dx = this.tx - this.x; let dy = this.ty - this.y;
+                let mdx = mouse.x - this.x; let mdy = mouse.y - this.y;
+                let dist = Math.sqrt(mdx*mdx + mdy*mdy);
+                if (dist < 80) { this.x -= mdx * 0.15; this.y -= mdy * 0.15; }
+                this.x += dx * this.speed; this.y += dy * this.speed;
             }
-
-            draw() {
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
+            draw() { 
+                ctx.fillStyle = this.color; 
+                ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); 
+                ctx.fill(); 
             }
-        }
-
-        let backgroundParticles = [];
-        function createBackgroundParticles() {
-            for(let i=0; i<60; i++) {
-                backgroundParticles.push({
-                    x: Math.random() * width,
-                    y: Math.random() * height,
-                    size: Math.random() * 1.2 + 0.5,
-                    speed: Math.random() * 0.5 + 0.1
-                });
-            }
-        }
-
-        function drawBackground() {
-            ctx.fillStyle = "#ffffff";
-            backgroundParticles.forEach(p => {
-                p.y -= p.speed;
-                if(p.y < 0) p.y = height;
-                ctx.globalAlpha = 0.2; 
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fill();
-            });
-            ctx.globalAlpha = 1;
         }
 
         function formText(text) {
             const points = getPoints(text);
+            // Si las letras son gigantes, necesitamos muchas partículas (hasta 3500)
             if (points.length > particles.length) {
-                const toAdd = points.length - particles.length;
-                for (let i = 0; i < toAdd; i++) {
-                    particles.push(new Particle(width/2, height/2));
-                }
+                const diff = points.length - particles.length;
+                for (let i = 0; i < diff; i++) particles.push(new Particle(width/2, height/2));
             }
             particles.forEach((p, i) => {
-                if (i < points.length) {
-                    p.tx = points[i].x;
-                    p.ty = points[i].y;
-                    // Reset de velocidad para que todos reaccionen igual al cambiar de texto
-                    p.speed = Math.random() * 0.05 + 0.02;
-                } else {
-                    p.tx = Math.random() * width;
-                    p.ty = height + 200;
+                if (i < points.length) { 
+                    p.tx = points[i].x; p.ty = points[i].y; 
+                } else { 
+                    p.tx = Math.random() * width; p.ty = height + 500; 
                 }
             });
         }
@@ -170,27 +184,18 @@
         function animate() {
             ctx.fillStyle = 'rgba(26, 15, 18, 0.25)'; 
             ctx.fillRect(0, 0, width, height);
-            
-            drawBackground();
-
-            particles.forEach(p => {
-                p.update();
-                p.draw();
-            });
+            particles.forEach(p => { p.update(); p.draw(); });
             requestAnimationFrame(animate);
         }
 
         function runSequence() {
-            createBackgroundParticles();
-            const initialParticles = width < 600 ? 500 : 900;
-            for (let i = 0; i < initialParticles; i++) {
-                particles.push(new Particle(Math.random() * width, height + 200, true));
-            }
+            // Empezamos con una base sólida de brillos
+            for (let i = 0; i < 1500; i++) particles.push(new Particle(Math.random() * width, height + 200, true));
             animate();
 
-            setTimeout(() => formText(MENSAJE_1), TIEMPO_LLUVIA);
-            setTimeout(() => formText(MENSAJE_2), TIEMPO_LLUVIA + TIEMPO_PRIMER_TEXTO);
-            setTimeout(() => formText(MENSAJE_3), TIEMPO_LLUVIA + TIEMPO_PRIMER_TEXTO + TIEMPO_SEGUNDO_TEXTO);
+            MENSAJES.forEach((msg, index) => {
+                setTimeout(() => { formText(msg); }, T_LLUVIA + (index * T_POR_MENSAJE));
+            });
         }
 
         runSequence();
